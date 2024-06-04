@@ -13,7 +13,13 @@ const DATABASE= process.env.DATABASE
     // mongoose.connect('mongodb://localhost:27017/Members');
 
     
-    mongoose.connect(DATABASE);
+mongoose.connect(DATABASE);
+//hashing bcrypt
+const bcrypt = require('bcrypt');
+const saltRounds =10
+
+
+
 
 
 const UserSchema = new mongoose.Schema({
@@ -28,12 +34,21 @@ const UserSchema = new mongoose.Schema({
         }
     ]
 });
+
+//middleware
+
+
+
 const User=mongoose.model('users',UserSchema);
 
 
 app.listen(PORT,()=>{
     console.log('listening to '+PORT);
 })
+
+app.get('/check',(req,res)=>{
+    res.sendStatus(200);
+});
 
 app.get('/:id', async (req, res) => {
     const IdReceived=req.params.id;
@@ -107,7 +122,7 @@ app.delete('/delete/:ownerId/:memberId',async (req,res)=>{
         const user=await User.findOneAndUpdate(
             {_id:ownerId},
             {$pull:{members:{_id:memberId}}}
-        );
+        )
         if(user){
             res.sendStatus(200);
         }
@@ -127,9 +142,10 @@ app.post('/newuser',async(req,res)=>{
         res.sendStatus(400);
     }
     else{
+        const hashedPass=await bcrypt.hash(req.body.userPass,saltRounds);
         const newUser=new User({
             name:userName,
-            pass:req.body.userPass,
+            pass:hashedPass,
             members:[]
         })
         await newUser.save();
@@ -140,14 +156,23 @@ app.post('/newuser',async(req,res)=>{
 app.post('/alreadyuser',async(req,res)=>{
     const userName=req.body.userName;
     const userPass=req.body.userPass;
-    const alreadyExist= await User.findOne({name:userName,pass:userPass});
+    // const hashedPass=await bcrypt.hash(userPass,saltRounds);
+    // console.log('hashedpass '+hashedPass);
+    const Exist= await User.findOne({name:userName});    
+    if(Exist){
+        const match=await bcrypt.compare(userPass,Exist.pass)
+        if(match){
+            res.status(200).send(Exist._id);
+        }
+        else{
+            console.log('diff');
+            res.sendStatus(400)
+        }
+    }
     // console.log(alreadyExist);
-    if(alreadyExist){
-        res.status(200).send(alreadyExist._id);
-    }
-    else{
-        res.status(400).send('Invalid');
-    }
+    // console.log('org pass '+alreadyExist.pass);
+    // console.log('recived pass '+hashedPass);
+
 });
 
 app.get('/updateDetail/:ownerId/:memberId',async (req,res)=>{
@@ -174,4 +199,6 @@ app.get('/updateDetail/:ownerId/:memberId',async (req,res)=>{
         res.status(500).send({error:'internal server error'});
     }
 });
+
+
 
