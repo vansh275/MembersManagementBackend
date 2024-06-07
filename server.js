@@ -154,8 +154,8 @@ app.post('/newuser',async(req,res)=>{
 });
 
 app.post('/alreadyuser',async(req,res)=>{
-    const userName=req.body.userName;
-    const userPass=req.body.userPass;
+    const userName=req.body.signinName;
+    const userPass=req.body.signinPass;
     // const hashedPass=await bcrypt.hash(userPass,saltRounds);
     // console.log('hashedpass '+hashedPass);
     const Exist= await User.findOne({name:userName});    
